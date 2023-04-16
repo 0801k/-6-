@@ -1,86 +1,130 @@
-package com.cookandroid.project8_1;
-
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.Calendar;
+package com.cookandroid.project9_2;
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
+import android.graphics.Paint;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
-import android.widget.DatePicker;
-import android.widget.EditText;
-import android.widget.Toast;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
 
 public class MainActivity extends AppCompatActivity {
 
-    DatePicker dp;
-    EditText edtDiary;
-    Button btnWrite;
-    String fileName;
+    ImageButton ibZoomin, ibZoomout, ibRotate, ibBright, ibDark, ibGray;
+    MyGraphicView graphicView;
+
+    static float scaleX = 1, scaleY = 1;
+    static float angle = 0;
+    static float color = 1;
+    static float satur = 1;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
-        getSupportActionBar().setIcon(R.drawable.ic_launcher);
-        setTitle("간단 일기장");
+        getSupportActionBar().setIcon(R.drawable.picture);
+        setTitle("미니 포토샵");
 
-        dp = (DatePicker) findViewById(R.id.datePicker1);
-        edtDiary = (EditText) findViewById(R.id.edtDiary);
-        btnWrite = (Button) findViewById(R.id.btnWrite);
+        LinearLayout pictureLayout = (LinearLayout) findViewById(R.id.pictureLayout);
+        graphicView = (MyGraphicView) new MyGraphicView(this);
+        pictureLayout.addView(graphicView);
 
-        Calendar cal = Calendar.getInstance();
-        int cYear = cal.get(Calendar.YEAR);
-        int cMonth = cal.get(Calendar.MONTH);
-        int cDay = cal.get(Calendar.DAY_OF_MONTH);
+        clickIcons();
+    }
 
-        dp.init(cYear, cMonth, cDay, new DatePicker.OnDateChangedListener() {
-            public void onDateChanged(DatePicker view, int year,
-                                      int monthOfYear, int dayOfMonth) {
-                fileName = Integer.toString(year) + "_"
-                        + Integer.toString(monthOfYear + 1) + "_"
-                        + Integer.toString(dayOfMonth) + ".txt";
-                String str = readDiary(fileName);
-                edtDiary.setText(str);
-                btnWrite.setEnabled(true);
+    private void clickIcons() {
+        ibZoomin = (ImageButton) findViewById(R.id.ibZoomin);
+        ibZoomin.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                scaleX = scaleX + 0.2f;
+                scaleY = scaleY + 0.2f;
+                graphicView.invalidate();
             }
         });
 
-        btnWrite.setOnClickListener(new View.OnClickListener() {
+        ibZoomout = (ImageButton) findViewById(R.id.ibZoomout);
+        ibZoomout.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                try {
-                    FileOutputStream outFs = openFileOutput(fileName,
-                            Context.MODE_PRIVATE);
-                    String str = edtDiary.getText().toString();
-                    outFs.write(str.getBytes());
-                    outFs.close();
-                    Toast.makeText(getApplicationContext(),
-                            fileName + " 이 저장됨", Toast.LENGTH_SHORT).show();
-                } catch (IOException e) {
-                }
+                scaleX = scaleX - 0.2f;
+                scaleY = scaleY - 0.2f;
+                graphicView.invalidate();
+            }
+        });
+
+        ibRotate = (ImageButton) findViewById(R.id.ibRotate);
+        ibRotate.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                angle = angle + 20;
+                graphicView.invalidate();
+            }
+        });
+
+        ibBright = (ImageButton) findViewById(R.id.ibBright);
+        ibBright.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                color = color + 0.2f;
+                graphicView.invalidate();
+            }
+        });
+
+        ibDark = (ImageButton) findViewById(R.id.ibDark);
+        ibDark.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                color = color - 0.2f;
+                graphicView.invalidate();
+            }
+        });
+
+        ibGray = (ImageButton) findViewById(R.id.ibGray);
+        ibGray.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                if (satur == 0)
+                    satur = 1;
+                else
+                    satur = 0;
+                graphicView.invalidate();
             }
         });
 
     }
 
-    String readDiary(String fName) {
-        String diaryStr = null;
-        FileInputStream inFs;
-        try {
-            inFs = openFileInput(fName);
-            byte[] txt = new byte[500];
-            inFs.read(txt);
-            inFs.close();
-            diaryStr = (new String(txt)).trim();
-            btnWrite.setText("수정 하기");
-        } catch (IOException e) {
-            edtDiary.setHint("일기 없음");
-            btnWrite.setText("새로 저장");
+    private static class MyGraphicView extends View {
+        public MyGraphicView(Context context) {
+            super(context);
         }
-        return diaryStr;
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+
+            int cenX = this.getWidth() / 2;
+            int cenY = this.getHeight() / 2;
+            canvas.scale(scaleX, scaleY, cenX, cenY);
+            canvas.rotate(angle, cenX, cenY);
+
+            Paint paint = new Paint();
+            float[] array = { color, 0, 0, 0, 0, 0, color, 0, 0, 0, 0, 0,
+                    color, 0, 0, 0, 0, 0, 1, 0 };
+            ColorMatrix cm = new ColorMatrix(array);
+
+            if (satur == 0)
+                cm.setSaturation(satur);
+
+            paint.setColorFilter(new ColorMatrixColorFilter(cm));
+
+            Bitmap picture = BitmapFactory.decodeResource(getResources(),
+                    R.drawable.flower05);
+            int picX = (this.getWidth() - picture.getWidth()) / 2;
+            int picY = (this.getHeight() - picture.getHeight()) / 2;
+            canvas.drawBitmap(picture, picX, picY, paint);
+
+            picture.recycle();
+        }
     }
 }
